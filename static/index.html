@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWASTIK — AI Adaptive Smart Scan & Spectrum Intelligence</title>
+  <link rel="stylesheet" href="/css/tactical.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300f0ff'><circle cx='12' cy='12' r='10'/></svg>">
+</head>
+<body>
+  <!-- CRT Scanline Overlay -->
+  <div class="scanlines"></div>
+
+  <!-- Fullscreen High-Visibility Alert Modal -->
+  <div id="fullscreen-alert-modal" class="fullscreen-alert-overlay">
+    <div style="background: rgba(13, 22, 39, 0.95); border: 2px solid #ff2a4b; padding: 40px; border-radius: 8px; text-align: center; max-width: 600px; box-shadow: 0 0 50px rgba(255, 42, 75, 0.6);">
+      <div style="font-family: monospace; font-size: 1.2rem; color: #ff2a4b; letter-spacing: 4px; font-weight: 800;">
+        ════════════════════════════════════
+      </div>
+      <div style="font-family: monospace; font-size: 2.2rem; color: #ff2a4b; font-weight: 900; margin: 12px 0; letter-spacing: 2px;">
+        ACTIVITY ALERT
+      </div>
+      <div style="font-family: monospace; font-size: 1.4rem; color: #ffffff; margin-bottom: 8px;">
+        TARGET DETECTED: <span id="fs-target-id" style="color: #00ff88;">T-001</span>
+      </div>
+      <div style="font-family: monospace; font-size: 1.1rem; color: #94a3b8; margin-bottom: 24px;">
+        BAND: <span id="fs-band" style="color: #00f0ff;">Band 3 (1200 MHz)</span> | CONFIDENCE: <span id="fs-conf" style="color: #ffaa00;">94%</span>
+      </div>
+      <button class="tactical-btn alert-btn" onclick="document.getElementById('fullscreen-alert-modal').classList.remove('active'); window.swastikAudio?.alertAck();">
+        ACKNOWLEDGE ALERT
+      </button>
+    </div>
+  </div>
+
+  <!-- Top Command Header -->
+  <header class="top-header">
+    <div class="brand-section">
+      <div class="brand-badge">SWASTIK</div>
+      <div>
+        <div class="brand-title">
+          SWASTIK <span style="font-size: 0.8rem; font-weight: normal; color: #94a3b8;">// MISSION CONTROL</span>
+        </div>
+        <div class="brand-subtitle">AI ADAPTIVE SMART SCAN & SPECTRUM INTELLIGENCE</div>
+      </div>
+    </div>
+
+    <div class="header-status-bar">
+      <div id="system-online-pill" class="status-pill online">
+        <span class="dot"></span> SYSTEM ONLINE
+      </div>
+      <div class="status-pill">
+        MODE: <span style="color: #00f0ff; margin-left: 4px;">SIMULATION</span>
+      </div>
+      <div class="status-pill">
+        AI CONFIDENCE: <span id="header-confidence" style="color: #00ff88; margin-left: 4px;">94%</span>
+      </div>
+      <div class="status-pill">
+        LATENCY: <span id="header-latency" style="color: #00f0ff; margin-left: 4px;">24 ms</span>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- One-Click Smart Scan Demo Sequencer -->
+      <button id="btn-step-demo" class="btn-tactical btn-gold" title="Step through Smart Scan Demo">
+        ⚡ SMART SCAN DEMO
+      </button>
+      <span id="demo-step-badge" class="disclaimer-badge" style="background: rgba(255,170,0,0.25); color: #ffaa00; font-family: monospace;">STEP 1 / 8</span>
+
+      <!-- Audio Synthesizer Controls -->
+      <button id="btn-toggle-mute" class="btn-tactical">
+        🔊 AUDIO: ON
+      </button>
+      <input id="audio-volume-slider" type="range" min="0" max="1" step="0.05" value="0.6" style="width: 60px; accent-color: #00f0ff;" title="Alert Volume">
+      <button id="btn-test-alert-sound" class="btn-tactical" title="Play Test Klaxon">
+        TEST BEEP
+      </button>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs Bar -->
+  <nav class="nav-tabs">
+    <button class="tab-btn active" data-tab="tab-mission" onclick="switchTabDirect('tab-mission')">⌖ MISSION CONTROL</button>
+    <button class="tab-btn" data-tab="tab-spectrum" onclick="switchTabDirect('tab-spectrum')">≋ LIVE SPECTRUM</button>
+    <button class="tab-btn" data-tab="tab-tracking" onclick="switchTabDirect('tab-tracking')">◎ OBJECT TRACKING</button>
+    <button class="tab-btn" data-tab="tab-scheduler" onclick="switchTabDirect('tab-scheduler')">🧠 AI SCHEDULER</button>
+    <button class="tab-btn" data-tab="tab-doppler" onclick="switchTabDirect('tab-doppler')">⚡ DOPPLER ANALYSIS</button>
+    <button class="tab-btn" data-tab="tab-dsp" onclick="switchTabDirect('tab-dsp')">📶 SIGNAL QUALITY & DSP</button>
+    <button class="tab-btn" data-tab="tab-camera" onclick="switchTabDirect('tab-camera')">📷 LIVE CAMERA RADAR</button>
+    <button class="tab-btn" data-tab="tab-analytics" onclick="switchTabDirect('tab-analytics')">📊 ANALYTICS</button>
+    <button class="tab-btn" data-tab="tab-simulation" onclick="switchTabDirect('tab-simulation')">⚙ SIMULATION</button>
+    <button class="tab-btn" data-tab="tab-settings" onclick="switchTabDirect('tab-settings')">🛠 SETTINGS</button>
+  </nav>
+
+  <!-- Mandatory Safety & Simulation Disclaimer Banner -->
+  <div class="disclaimer-banner">
+    <div>
+      <span class="disclaimer-badge">SAFE SYNTHETIC RESEARCH PROTOTYPE</span>
+      &nbsp;SIH Hackathon Demonstration. No real military frequencies, real intercepted comms, classified parameters, or weapon control logic are used. Laptop webcam is strictly a visual demonstration sensor.
+    </div>
+    <div id="demo-step-desc" style="color: #cbd5e1; font-weight: 600;">
+      Step 1: Aircraft AIR-01 detected in Band 3 -> AI scans B3.
+    </div>
+  </div>
+
+  <!-- Active Camera Alert Banner -->
+  <div id="camera-alert-banner" class="active-alert-box" style="display: none; margin: 12px 20px 0 20px;">
+    <div>
+      <span style="font-weight: bold; font-family: monospace; color: #ff2a4b;">⚠ SYNTHETIC ACTIVITY DETECTED:</span>
+      <span id="camera-alert-message" style="margin-left: 8px; color: #fff; font-family: monospace;">Target T-001 created from camera visual event.</span>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <span class="disclaimer-badge" style="background: rgba(0,240,255,0.2); color: #00f0ff;">SYNTHETIC RADAR MAPPED</span>
+    </div>
+  </div>
+
+  <!-- Main Content Body -->
+  <main class="main-content">
+
+    <!-- ====================================================================
+         TAB 1: MISSION CONTROL
+         ==================================================================== -->
+    <div id="tab-mission" class="tab-pane active">
+      <div class="mission-control-grid">
+
+        <!-- LEFT COLUMN: Live 2D Synthetic Radar HUD -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">
+              ◎ LIVE SYNTHETIC RADAR
+            </div>
+            <div class="card-subtitle">MAX RANGE: 20 KM // CENTER (0,0)</div>
+          </div>
+
+          <div class="radar-container">
+            <canvas id="mission-radar-canvas" class="radar-canvas"></canvas>
+            <div class="radar-hud-overlay">
+              <span>ALERT BOUND: 5.0 KM</span>
+              <span>BEARING: 000° - 360°</span>
+            </div>
+          </div>
+
+          <!-- Adaptive Band Scheduler Bar -->
+          <div class="band-schedule-container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="card-title" style="font-size: 0.8rem;">RECEIVER SCAN ALLOCATION</span>
+              <span style="font-family: monospace; font-size: 0.72rem; color: #64748b;">DYNAMIC SELECTION</span>
+            </div>
+            <div id="band-bar-chips" class="band-bar-grid">
+              <!-- Rendered dynamically B1 to B8 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- CENTER COLUMN: Webcam Computer Vision Sensor -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">
+              📷 WEBCAM / COMPUTER VISION
+            </div>
+            <div id="camera-status-badge" class="status-pill">OFFLINE</div>
+          </div>
+
+          <div class="camera-stream-wrapper">
+            <video id="webcam-feed" class="webcam-video" autoplay playsinline muted></video>
+            <canvas id="webcam-overlay-canvas" class="webcam-overlay-canvas"></canvas>
+          </div>
+
+          <div class="camera-controls-bar">
+            <button id="btn-activate-camera" class="btn-tactical btn-gold" style="flex: 1;">
+              ACTIVATE LIVE CAMERA
+            </button>
+            <button id="btn-stop-camera" class="btn-tactical btn-danger" style="display: none; flex: 1;">
+              STOP CAMERA
+            </button>
+            <button id="btn-pause-camera" class="btn-tactical">
+              PAUSE DETECTION
+            </button>
+            <button id="btn-fullscreen-alert" class="btn-tactical">
+              FULL SCREEN ALERT MODE
+            </button>
+          </div>
+
+          <!-- Synthetic Frequency Fluctuation Plot -->
+          <div style="margin-top: 14px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="font-family: monospace; font-size: 0.75rem; color: #00f0ff; font-weight: bold;">
+                SYNTHETIC FREQUENCY FLUCTUATION
+              </span>
+              <span style="font-family: monospace; font-size: 0.68rem; color: #ffaa00;">
+                SIMULATED RF PARAMETERS
+              </span>
+            </div>
+            <div style="height: 140px; width: 100%;">
+              <canvas id="cam-fluctuation-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Target Intel HUD & Kinematics -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">
+              🎯 TARGET INTELLIGENCE
+            </div>
+            <div id="intel-target-id" class="card-subtitle" style="color: #00f0ff; font-weight: bold;">AIR-01</div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div class="data-row">
+              <span class="data-label">CLASSIFICATION</span>
+              <span id="intel-target-class" class="data-value highlight-green">Aircraft</span>
+            </div>
+            <div class="data-row">
+              <span class="data-label">CURRENT BAND</span>
+              <span id="intel-target-band" class="data-value highlight-cyan">B3 (VHF/UHF)</span>
+            </div>
+            <div class="data-row">
+              <span class="data-label">DISTANCE FROM CENTER</span>
+              <span id="intel-target-dist" class="data-value">8.4 km</span>
+            </div>
+            <div class="data-row">
+              <span class="data-label">DIRECTION / BEARING</span>
+              <span id="intel-target-dir" class="data-value">NE (042°)</span>
+            </div>
+            <div class="data-row">
+              <span class="data-label">VELOCITY</span>
+              <span id="intel-target-speed" class="data-value">280 km/h</span>
+            </div>
+            <div class="data-row">
+              <span class="data-label">STATUS</span>
+              <span id="intel-target-status" class="data-value highlight-green">TRACKED</span>
+            </div>
+            <div class="data-row">
+              <span class="data-label">SIMULATION RISK LEVEL</span>
+              <span id="intel-target-risk" class="data-value highlight-amber">MEDIUM</span>
+            </div>
+            <div class="data-row">
+              <span class="data-label">DETECTION CONFIDENCE</span>
+              <span id="intel-target-conf" class="data-value">94%</span>
+            </div>
+          </div>
+
+          <!-- Position & Distance Tracking Box -->
+          <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(30,58,95,0.6);">
+            <div style="font-family: monospace; font-size: 0.75rem; color: #00ff88; font-weight: bold; margin-bottom: 6px;">
+              KINEMATICS & TRACKING ENGINE
+            </div>
+            <div style="background: rgba(5,12,24,0.7); border: 1px solid #1e3a5f; border-radius: 4px; padding: 8px; font-family: monospace; font-size: 0.72rem;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span style="color: #64748b;">Previous Position:</span>
+                <span id="kinematics-prev-coord" style="color: #cbd5e1;">(2.1, 3.4)</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span style="color: #64748b;">Current Position:</span>
+                <span id="kinematics-curr-coord" style="color: #00f0ff;">(5.2, 6.8)</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span style="color: #64748b;">Distance from Radar:</span>
+                <span id="kinematics-dist-radar" style="color: #ffaa00; font-weight: bold;">8.47 km</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: #64748b;">Distance Travelled:</span>
+                <span id="kinematics-dist-travel" style="color: #00ff88; font-weight: bold;">4.91 km</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Camera Multi-Target Info (when active) -->
+          <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(30,58,95,0.6);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-family: monospace; font-size: 0.75rem; color: #00f0ff; font-weight: bold;">
+                WEBCAM TARGETS (MULTI-OBJECT)
+              </span>
+              <span id="cam-target-count-badge" class="data-value highlight-green" style="font-size: 0.7rem;">0 ACTIVE</span>
+            </div>
+            <div id="cam-active-targets-list-mission" style="max-height: 150px; overflow-y: auto;">
+              <div style="color: #64748b; font-family: monospace; font-size: 0.75rem; padding: 4px;">NO VISUAL TARGETS DETECTED</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- BOTTOM ROW: Active Alerts & Live Event Log -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <!-- Left: Active Alerts Panel -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">
+              ⚠ ACTIVE SIMULATION ALERTS
+            </div>
+            <div class="card-subtitle">PERIMETER & SENSOR VIOLATIONS</div>
+          </div>
+          <div id="active-alerts-container" style="max-height: 180px; overflow-y: auto;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Right: Live Event Log -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">
+              📋 LIVE EVENT LOG
+            </div>
+            <div class="card-subtitle">SYSTEM TELEMETRY AUDIT</div>
+          </div>
+          <div id="live-event-log" class="event-log-container">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         TAB 2: LIVE SPECTRUM & WATERFALL
+         ==================================================================== -->
+    <div id="tab-spectrum" class="tab-pane">
+      <div class="tactical-card">
+        <div class="card-header">
+          <div class="card-title">
+            ≋ 2D SPECTRUM WATERFALL (TIME-FREQUENCY HEATMAP)
+          </div>
+          <div class="card-subtitle">
+            X: SYNTHETIC BANDS (B1 - B8) // Y: OBSERVATION TIME (DESCENDING)
+          </div>
+        </div>
+
+        <div style="margin-bottom: 10px; display: flex; gap: 16px; font-family: monospace; font-size: 0.75rem; flex-wrap: wrap;">
+          <div><span style="color: #00f0ff; font-weight: bold;">■ CYAN BOX:</span> Current AI Receiver Scan Window</div>
+          <div><span style="color: #ffaa00; font-weight: bold;">■ AMBER DASHED:</span> Predicted Target Region</div>
+          <div><span style="color: #c084fc; font-weight: bold;">■ PURPLE BOX:</span> Exploration Sweep Region</div>
+        </div>
+
+        <div style="position: relative; width: 100%;">
+          <canvas id="spectrum-waterfall-canvas" class="waterfall-canvas"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         TAB 3: OBJECT TRACKING & DOPPLER
+         ==================================================================== -->
+    <div id="tab-tracking" class="tab-pane">
+      <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 16px;">
+        <!-- Left: Secondary Radar & Target Kinematics -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">◎ TACTICAL TRACKING MAP</div>
+            <div class="card-subtitle">MULTI-TARGET ORCHESTRATION</div>
+          </div>
+          <div class="radar-container" style="max-width: 380px;">
+            <canvas id="tracking-radar-canvas" class="radar-canvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Right: Doppler Shift Principles & Micro-Doppler Signatures -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">⚡ DOPPLER EFFECT & MICRO-PATTERNS</div>
+            <div class="card-subtitle">f_d = (2 * v_radial) / λ</div>
+          </div>
+
+          <div style="background: rgba(5,12,24,0.8); border: 1px solid #1e3a5f; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.75rem; margin-bottom: 12px;">
+            <span style="color: #00f0ff; font-weight: bold;">HOW DOPPLER HELPS IN SCANNING:</span>
+            <ul style="margin-left: 18px; margin-top: 4px; color: #cbd5e1;">
+              <li><strong>Detects Moving Objects:</strong> Produces frequency shift proportional to radial velocity.</li>
+              <li><strong>Micro-Doppler Signatures:</strong> Rotating propeller blades of drones vs smooth airframes of aircraft create unique micro-Doppler patterns.</li>
+              <li><strong>Airborne Classification:</strong> Distinct motion patterns enable automatic identification.</li>
+            </ul>
+          </div>
+
+          <!-- Archetypes Grid -->
+          <div id="doppler-archetypes-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Frequency Bands Table -->
+      <div class="tactical-card" style="margin-top: 16px;">
+        <div class="card-header">
+          <div class="card-title">FREQUENCY BANDS SCAN ALLOCATION (1.5 MHz – 40 GHz)</div>
+          <div class="card-subtitle">SYNTHETIC SPECTRUM MATRIX</div>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-family: monospace; font-size: 0.78rem; text-align: left;">
+          <thead>
+            <tr style="border-bottom: 1px solid #1e3a5f; color: #00f0ff;">
+              <th style="padding: 8px;">Band ID</th>
+              <th>Band Range</th>
+              <th>Synthetic Designation</th>
+              <th>Typical Targets</th>
+              <th>Aircraft</th>
+              <th>Drone</th>
+              <th>Radar</th>
+              <th>Comms</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <td style="padding: 6px; font-weight: bold; color: #fff;">B1</td>
+              <td>1.5 – 30 MHz</td>
+              <td>VLF / LF</td>
+              <td>Long range comms, beacons</td>
+              <td>✓ (some)</td>
+              <td>✓ (some)</td>
+              <td>—</td>
+              <td>✓</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <td style="padding: 6px; font-weight: bold; color: #fff;">B2</td>
+              <td>30 – 300 MHz</td>
+              <td>HF</td>
+              <td>Military comms, air traffic</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>—</td>
+              <td>✓</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <td style="padding: 6px; font-weight: bold; color: #fff;">B3</td>
+              <td>300 MHz – 3 GHz</td>
+              <td>VHF / UHF</td>
+              <td>ATC, data links, UAV control</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓ (some)</td>
+              <td>✓</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <td style="padding: 6px; font-weight: bold; color: #fff;">B4</td>
+              <td>3 – 8 GHz</td>
+              <td>S / C Band</td>
+              <td>Radar, satellite, Wi-Fi 5G</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <td style="padding: 6px; font-weight: bold; color: #fff;">B5</td>
+              <td>8 – 12 GHz</td>
+              <td>X Band</td>
+              <td>Fire control, precision tracking</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>—</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <td style="padding: 6px; font-weight: bold; color: #fff;">B6</td>
+              <td>12 – 18 GHz</td>
+              <td>Ku Band</td>
+              <td>Weather radar, missile seeker</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>—</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <td style="padding: 6px; font-weight: bold; color: #fff;">B7</td>
+              <td>18 – 27 GHz</td>
+              <td>K Band</td>
+              <td>High resolution links, SAR</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px; font-weight: bold; color: #fff;">B8</td>
+              <td>27 – 40 GHz</td>
+              <td>Ka Band</td>
+              <td>Millimeter wave, exploration</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         TAB 4: AI SCHEDULER & PRIORITY ENGINE
+         ==================================================================== -->
+    <div id="tab-scheduler" class="tab-pane">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        
+        <!-- Left: Current Decision & Explainable Breakdown -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">🧠 CURRENT AI SCHEDULER DECISION</div>
+            <div class="card-subtitle">DYNAMIC CONTEXTUAL BANDIT</div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+            <div style="background: rgba(5,12,24,0.7); border: 1px solid #1e3a5f; padding: 10px; border-radius: 4px;">
+              <div style="font-size: 0.72rem; color: #64748b; font-family: monospace;">CURRENT SCANNED BAND</div>
+              <div id="sched-current-band" style="font-size: 1.6rem; font-weight: bold; color: #00f0ff; font-family: monospace;">B3</div>
+            </div>
+            <div style="background: rgba(5,12,24,0.7); border: 1px solid #00f0ff; padding: 10px; border-radius: 4px; box-shadow: 0 0 10px rgba(0,240,255,0.2);">
+              <div style="font-size: 0.72rem; color: #00f0ff; font-family: monospace;">NEXT SELECTED BAND</div>
+              <div id="sched-next-band" style="font-size: 1.6rem; font-weight: bold; color: #00ff88; font-family: monospace;">B7</div>
+            </div>
+          </div>
+
+          <div class="data-row">
+            <span class="data-label">TOTAL PRIORITY SCORE</span>
+            <span id="sched-prio-score" class="data-value highlight-cyan" style="font-size: 1rem;">96.2</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">PREDICTED ACTIVITY PROBABILITY</span>
+            <span id="sched-pred-score" class="data-value highlight-green">40%</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">AI REASONING</span>
+            <span id="sched-reason-text" class="data-value highlight-amber" style="font-size: 0.78rem;">Target AIR-01 kinematic trend towards B7</span>
+          </div>
+
+          <!-- Explainable AI Chart -->
+          <div style="margin-top: 14px;">
+            <div style="font-family: monospace; font-size: 0.75rem; color: #00f0ff; font-weight: bold; margin-bottom: 6px;">
+              WHY DID AI CHOOSE THIS BAND? (EXPLAINABILITY BREAKDOWN)
+            </div>
+            <div style="height: 170px; width: 100%;">
+              <canvas id="scheduler-reason-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: 10-Minute Recurrence & Exploit vs Explore -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">⚖ EXPLOITATION VS EXPLORATION</div>
+            <div class="card-subtitle">CONTINUOUS SPECTRUM SURVEILLANCE</div>
+          </div>
+
+          <!-- Exploitation vs Exploration Balance Bar -->
+          <div style="margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; font-family: monospace; font-size: 0.8rem; margin-bottom: 4px;">
+              <span>EXPLOITATION: <strong id="balance-exploit-text" style="color: #00ff88;">76%</strong></span>
+              <span>EXPLORATION: <strong id="balance-explore-text" style="color: #c084fc;">24%</strong></span>
+            </div>
+            <div style="height: 12px; width: 100%; background: #040814; border-radius: 6px; overflow: hidden; display: flex; border: 1px solid #1e3a5f;">
+              <div id="balance-exploit-fill" style="width: 76%; background: #00ff88; transition: width 0.3s ease;"></div>
+              <div id="balance-explore-fill" style="width: 24%; background: #c084fc; transition: width 0.3s ease;"></div>
+            </div>
+            <div style="margin-top: 8px;">
+              <label style="font-family: monospace; font-size: 0.72rem; color: #94a3b8;">Adjust Exploit/Explore Balance:</label>
+              <input id="slider-exploit-ratio" type="range" min="0.4" max="0.95" step="0.02" value="0.76" style="width: 100%; accent-color: #00ff88;">
+            </div>
+          </div>
+
+          <!-- 10-Minute Recurrence Pattern Box -->
+          <div style="background: rgba(5,12,24,0.8); border: 1px solid #1e3a5f; border-radius: 4px; padding: 12px;">
+            <div style="font-family: monospace; font-size: 0.8rem; color: #ffaa00; font-weight: bold; margin-bottom: 8px;">
+              BAND B5 ACTIVITY PATTERN (ROLLING 10-MIN WINDOW)
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: monospace; font-size: 0.75rem;">
+              <div class="data-row">
+                <span class="data-label">OBSERVATIONS:</span>
+                <span id="b5-obs-count" class="data-value highlight-green">5</span>
+              </div>
+              <div class="data-row">
+                <span class="data-label">WINDOW:</span>
+                <span class="data-value">10 minutes</span>
+              </div>
+              <div class="data-row">
+                <span class="data-label">AVERAGE INTERVAL:</span>
+                <span id="b5-avg-interval" class="data-value highlight-cyan">58.4s</span>
+              </div>
+              <div class="data-row">
+                <span class="data-label">PREDICTED NEXT:</span>
+                <span id="b5-next-act" class="data-value highlight-amber">Adaptive Hint</span>
+              </div>
+            </div>
+            <div style="margin-top: 8px; font-size: 0.7rem; color: #64748b; font-family: monospace;">
+              * AI treats recurrence intervals as soft probabilistic hints, avoiding rigid fixed schedules.
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Ranked Bands Table -->
+      <div class="tactical-card">
+        <div class="card-header">
+          <div class="card-title">DYNAMIC BAND RANKING TABLE (AUTO-UPDATING)</div>
+          <div class="card-subtitle">PRIORITY FORMULA: P = w_pred*P + w_recent*A + w_trend*T + w_uncert*U + w_stale*S - w_cost*C</div>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-family: monospace; font-size: 0.78rem; text-align: left;">
+          <thead>
+            <tr style="border-bottom: 1px solid #1e3a5f; color: #00f0ff;">
+              <th style="padding: 8px;">Rank</th>
+              <th>Band ID</th>
+              <th>Activity Score</th>
+              <th>Priority Score</th>
+              <th>Recent Hits</th>
+              <th>Time Since Scan</th>
+              <th>Scheduler Decision</th>
+            </tr>
+          </thead>
+          <tbody id="ranked-bands-tbody">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         TAB 5: DOPPLER EFFECT & MICRO-DOPPLER ANALYSIS
+         ==================================================================== -->
+    <div id="tab-doppler" class="tab-pane">
+      <!-- Top Theory & Formula Banner -->
+      <div class="tactical-card" style="margin-bottom: 16px;">
+        <div class="card-header">
+          <div class="card-title">⚡ DOPPLER EFFECT BASED SMART SCAN SYSTEM</div>
+          <div class="card-subtitle">DETECT • IDENTIFY • TRACK • CLASSIFY (IMAGE 1 REFERENCE ENGINE)</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 12px; font-family: monospace; font-size: 0.78rem;">
+          <div style="background: rgba(5,12,24,0.7); border: 1px solid #1e3a5f; padding: 10px; border-radius: 4px;">
+            <div style="color: #00f0ff; font-weight: bold; margin-bottom: 4px;">1. WHAT IS THE DOPPLER EFFECT?</div>
+            <div style="color: #cbd5e1; font-size: 0.72rem; line-height: 1.4;">
+              Change in frequency due to relative motion. In radar, signal travels to target and reflects back:
+              <div style="margin: 6px 0; color: #00ff88; font-weight: bold; font-size: 0.9rem;">f_D = (2 * v_r) / λ = (2 * v_r * f_0) / c</div>
+              Factor 2 accounts for two-way radar round trip.
+            </div>
+          </div>
+          <div style="background: rgba(5,12,24,0.7); border: 1px solid #1e3a5f; padding: 10px; border-radius: 4px;">
+            <div style="color: #ffaa00; font-weight: bold; margin-bottom: 4px;">2. HOW DOPPLER HELPS SCANNING</div>
+            <ul style="color: #cbd5e1; font-size: 0.72rem; margin-left: 14px; line-height: 1.4;">
+              <li><strong>Detects Moving Objects:</strong> Moving targets produce measurable shift.</li>
+              <li><strong>Estimates Velocity:</strong> Amount of shift directly gives radial speed.</li>
+              <li><strong>Micro-Doppler Analysis:</strong> Rotating blades create harmonic modulation.</li>
+            </ul>
+          </div>
+          <div style="background: rgba(5,12,24,0.7); border: 1px solid #1e3a5f; padding: 10px; border-radius: 4px;">
+            <div style="color: #00ff88; font-weight: bold; margin-bottom: 4px;">3. PROCESSING PIPELINE</div>
+            <div style="color: #cbd5e1; font-size: 0.72rem; line-height: 1.4;">
+              <strong>RF Spectrum Scan</strong> (1.5 MHz – 40 GHz)<br>
+              → <strong>Doppler FFT / STFT</strong> (Frequency Shifts)<br>
+              → <strong>Micro-Doppler Feature Extraction</strong><br>
+              → <strong>AI Classification & Track Output</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Interactive Doppler Scope -->
+      <div style="display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 16px; margin-bottom: 16px;">
+        <!-- Left: Live Signature Scopes & Selector -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">🎯 LIVE MICRO-DOPPLER SIGNATURE SCOPE</div>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="doppler-selector-btns">
+              <button class="btn-tactical active" onclick="selectDopplerArchetype('Aircraft')" id="dbtn-Aircraft">Aircraft</button>
+              <button class="btn-tactical" onclick="selectDopplerArchetype('Drone')" id="dbtn-Drone">Drone</button>
+              <button class="btn-tactical" onclick="selectDopplerArchetype('Missile')" id="dbtn-Missile">Missile</button>
+              <button class="btn-tactical" onclick="selectDopplerArchetype('Bird')" id="dbtn-Bird">Bird</button>
+              <button class="btn-tactical" onclick="selectDopplerArchetype('Radar')" id="dbtn-Radar">Radar</button>
+              <button class="btn-tactical" onclick="selectDopplerArchetype('Communication')" id="dbtn-Communication">Communication</button>
+            </div>
+          </div>
+
+          <!-- Dual Scope: Time-Domain Waveform & Frequency-Domain Doppler Spectrum -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+            <div>
+              <div style="font-family: monospace; font-size: 0.75rem; color: #00f0ff; margin-bottom: 4px;">
+                TIME-DOMAIN SIGNATURE (MICRO-DOPPLER)
+              </div>
+              <canvas id="doppler-live-wave-canvas" width="340" height="140" style="width: 100%; height: 140px; background: #030814; border: 1px solid #1e3a5f; border-radius: 4px;"></canvas>
+            </div>
+            <div>
+              <div style="font-family: monospace; font-size: 0.75rem; color: #00ff88; margin-bottom: 4px;">
+                DOPPLER SHIFT SPECTRUM (-50 to +50 kHz)
+              </div>
+              <canvas id="doppler-live-spec-canvas" width="340" height="140" style="width: 100%; height: 140px; background: #030814; border: 1px solid #1e3a5f; border-radius: 4px;"></canvas>
+            </div>
+          </div>
+
+          <!-- Micro-Doppler Spectrogram Waterfall (STFT Time-Frequency) -->
+          <div>
+            <div style="display: flex; justify-content: space-between; font-family: monospace; font-size: 0.75rem; color: #ffaa00; margin-bottom: 4px;">
+              <span>MICRO-DOPPLER TIME-FREQUENCY SPECTROGRAM (STFT)</span>
+              <span id="doppler-stft-desc">Rotor Blade Harmonics Active</span>
+            </div>
+            <canvas id="doppler-spectrogram-canvas" width="680" height="100" style="width: 100%; height: 100px; background: #020610; border: 1px solid #1e3a5f; border-radius: 4px;"></canvas>
+          </div>
+        </div>
+
+        <!-- Right: Interactive Doppler Physics Simulator -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">⚙ DOPPLER KINEMATICS CALCULATOR</div>
+            <div class="card-subtitle">INTERACTIVE PHYSICAL MODEL</div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px; font-family: monospace; font-size: 0.78rem;">
+            <div>
+              <div style="display: flex; justify-content: space-between; color: #94a3b8; margin-bottom: 2px;">
+                <span>Target Radial Speed (v):</span>
+                <span id="calc-speed-val" style="color: #00f0ff; font-weight: bold;">280 m/s (1008 km/h)</span>
+              </div>
+              <input id="calc-speed-slider" type="range" min="0" max="700" value="280" step="5" style="width: 100%; accent-color: #00f0ff;">
+            </div>
+
+            <div>
+              <div style="display: flex; justify-content: space-between; color: #94a3b8; margin-bottom: 2px;">
+                <span>Radar Carrier Frequency (f0):</span>
+                <span id="calc-freq-val" style="color: #00ff88; font-weight: bold;">10.0 GHz (X-Band)</span>
+              </div>
+              <input id="calc-freq-slider" type="range" min="1.0" max="35.0" value="10.0" step="0.5" style="width: 100%; accent-color: #00ff88;">
+            </div>
+
+            <div style="background: rgba(5,12,24,0.8); border: 1px solid #1e3a5f; border-radius: 4px; padding: 10px; margin-top: 6px;">
+              <div class="data-row">
+                <span class="data-label">Radar Wavelength (λ):</span>
+                <span id="calc-wavelength" class="data-value">0.0300 m (3.0 cm)</span>
+              </div>
+              <div class="data-row">
+                <span class="data-label">Calculated Doppler Shift (fd):</span>
+                <span id="calc-doppler-shift" class="data-value highlight-cyan" style="font-size: 1rem;">+18.67 kHz</span>
+              </div>
+              <div class="data-row">
+                <span class="data-label">Micro-Doppler Modulation:</span>
+                <span id="calc-micro-mod" class="data-value highlight-amber">Smooth Body (Aircraft)</span>
+              </div>
+              <div class="data-row">
+                <span class="data-label">AI Classification Decision:</span>
+                <span id="calc-classification" class="data-value highlight-green" style="font-weight: bold;">Aircraft (High Confidence)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Target Signatures & Doppler Patterns Matrix -->
+      <div class="tactical-card">
+        <div class="card-header">
+          <div class="card-title">📋 TARGET SIGNATURES & DOPPLER PATTERNS (IMAGE 1 SPECIFICATION)</div>
+          <div class="card-subtitle">UNIQUE MOTION PATTERNS + FREQUENCY BANDS</div>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-family: monospace; font-size: 0.78rem; text-align: left;">
+          <thead>
+            <tr style="border-bottom: 1px solid #1e3a5f; color: #00f0ff;">
+              <th style="padding: 8px;">Target ID</th>
+              <th>Type</th>
+              <th>Speed (v)</th>
+              <th>Frequency Band</th>
+              <th>Center Freq</th>
+              <th>Doppler Shift (fd)</th>
+              <th>Micro-Doppler Signature</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;" onclick="selectDopplerArchetype('Aircraft')">
+              <td style="padding: 6px; font-weight: bold; color: #fff;">T1</td>
+              <td style="color: #00f0ff; font-weight: bold;">Aircraft</td>
+              <td>280 m/s</td>
+              <td>B5 (X-Band)</td>
+              <td>9.5 GHz</td>
+              <td style="color: #00f0ff; font-weight: bold;">+18.0 kHz</td>
+              <td>Smooth airframe wave, large shift</td>
+              <td><button class="btn-tactical" style="padding: 2px 8px; font-size: 0.7rem;">ANALYZE</button></td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;" onclick="selectDopplerArchetype('Drone')">
+              <td style="padding: 6px; font-weight: bold; color: #fff;">T2</td>
+              <td style="color: #00ff88; font-weight: bold;">Drone (Quadcopter)</td>
+              <td>40 m/s</td>
+              <td>B3 (UHF/S-Band)</td>
+              <td>2.4 GHz</td>
+              <td style="color: #00ff88; font-weight: bold;">+2.6 kHz</td>
+              <td>4-rotor blade micro-Doppler chopping (120 Hz)</td>
+              <td><button class="btn-tactical" style="padding: 2px 8px; font-size: 0.7rem;">ANALYZE</button></td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;" onclick="selectDopplerArchetype('Missile')">
+              <td style="padding: 6px; font-weight: bold; color: #fff;">T3</td>
+              <td style="color: #ff2a4b; font-weight: bold;">Missile</td>
+              <td>600 m/s</td>
+              <td>B6 (Ku-Band)</td>
+              <td>12.0 GHz</td>
+              <td style="color: #ff2a4b; font-weight: bold;">+36.0 kHz</td>
+              <td>Extreme velocity, steep shockwave rise</td>
+              <td><button class="btn-tactical" style="padding: 2px 8px; font-size: 0.7rem;">ANALYZE</button></td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;" onclick="selectDopplerArchetype('Bird')">
+              <td style="padding: 6px; font-weight: bold; color: #fff;">T4</td>
+              <td style="color: #c084fc; font-weight: bold;">Bird</td>
+              <td>15 m/s</td>
+              <td>B3 (VHF/UHF)</td>
+              <td>1.2 GHz</td>
+              <td style="color: #c084fc; font-weight: bold;">+0.8 kHz</td>
+              <td>Chaotic irregular wing flap modulation (8 Hz)</td>
+              <td><button class="btn-tactical" style="padding: 2px 8px; font-size: 0.7rem;">ANALYZE</button></td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;" onclick="selectDopplerArchetype('Radar')">
+              <td style="padding: 6px; font-weight: bold; color: #fff;">T5</td>
+              <td style="color: #ffaa00; font-weight: bold;">Radar (Ground/Air)</td>
+              <td>0 m/s</td>
+              <td>B5 (X-Band)</td>
+              <td>9.8 GHz</td>
+              <td style="color: #ffaa00; font-weight: bold;">0.0 kHz</td>
+              <td>Stationary continuous wave pattern</td>
+              <td><button class="btn-tactical" style="padding: 2px 8px; font-size: 0.7rem;">ANALYZE</button></td>
+            </tr>
+            <tr style="cursor: pointer;" onclick="selectDopplerArchetype('Communication')">
+              <td style="padding: 6px; font-weight: bold; color: #fff;">T6</td>
+              <td style="color: #38bdf8; font-weight: bold;">Communication Link</td>
+              <td>0 m/s</td>
+              <td>B4 (S/C Band)</td>
+              <td>3.5 GHz</td>
+              <td style="color: #38bdf8; font-weight: bold;">0.0 kHz</td>
+              <td>Constant-envelope voice/data digital carrier</td>
+              <td><button class="btn-tactical" style="padding: 2px 8px; font-size: 0.7rem;">ANALYZE</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         TAB 6: SIGNAL QUALITY & DSP
+         ==================================================================== -->
+    <div id="tab-dsp" class="tab-pane">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <!-- Left: Waveforms & Filter status -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">📶 RF SIGNAL QUALITY & INTERFERENCE REDUCTION</div>
+            <button id="btn-toggle-dsp" class="btn-tactical">DSP FILTERING: ON</button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; font-family: monospace;">
+            <div style="background: rgba(5,12,24,0.7); border: 1px solid #1e3a5f; padding: 8px; border-radius: 4px; text-align: center;">
+              <div style="font-size: 0.7rem; color: #64748b;">SNR BEFORE</div>
+              <div id="dsp-snr-before" style="font-size: 1.1rem; font-weight: bold; color: #ffaa00;">4.2 dB</div>
+            </div>
+            <div style="background: rgba(5,12,24,0.7); border: 1px solid #00ff88; padding: 8px; border-radius: 4px; text-align: center;">
+              <div style="font-size: 0.7rem; color: #00ff88;">SNR AFTER</div>
+              <div id="dsp-snr-after" style="font-size: 1.1rem; font-weight: bold; color: #00ff88;">19.8 dB</div>
+            </div>
+            <div style="background: rgba(5,12,24,0.7); border: 1px solid #1e3a5f; padding: 8px; border-radius: 4px; text-align: center;">
+              <div style="font-size: 0.7rem; color: #64748b;">NOISE LEVEL</div>
+              <div id="dsp-noise-level" style="font-size: 1.1rem; font-weight: bold; color: #ff2a4b;">-4.2 dB</div>
+            </div>
+            <div style="background: rgba(5,12,24,0.7); border: 1px solid #1e3a5f; padding: 8px; border-radius: 4px; text-align: center;">
+              <div style="font-size: 0.7rem; color: #64748b;">SIGNAL QUALITY</div>
+              <div id="dsp-signal-quality" style="font-size: 1.1rem; font-weight: bold; color: #00f0ff;">94.2%</div>
+            </div>
+          </div>
+
+          <div style="font-family: monospace; font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px;">
+            STATUS: <span id="dsp-filter-status" style="color: #00ff88; font-weight: bold;">ADAPTIVE LMS + FIR SMOOTHING ACTIVE</span>
+          </div>
+
+          <!-- Dual Waveform Chart -->
+          <div style="height: 220px; width: 100%;">
+            <canvas id="dsp-waveform-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Right: FFT Spectral Decomposition -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">📊 FFT SPECTRAL ENERGY DECOMPOSITION</div>
+            <div class="card-subtitle">FAST FOURIER TRANSFORM (0 – 240 Hz)</div>
+          </div>
+          <div style="height: 290px; width: 100%;">
+            <canvas id="dsp-fft-chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         TAB 6: LIVE CAMERA RADAR (DEDICATED MULTI-TARGET CONSOLE)
+         ==================================================================== -->
+    <div id="tab-camera" class="tab-pane">
+      <!-- Dedicated Camera Controls Bar -->
+      <div class="tactical-card" style="margin-bottom: 16px; padding: 10px 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button id="btn-activate-camera-2" class="btn-tactical btn-gold">
+              ACTIVATE LIVE CAMERA
+            </button>
+            <button id="btn-stop-camera-2" class="btn-tactical btn-danger" style="display: none;">
+              STOP CAMERA
+            </button>
+            <button id="btn-pause-camera-2" class="btn-tactical">
+              PAUSE DETECTION
+            </button>
+            <button id="btn-fullscreen-alert-2" class="btn-tactical">
+              FULL SCREEN ALERT MODE
+            </button>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 14px; font-family: monospace; font-size: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="color: #64748b;">CV SENSITIVITY:</span>
+              <input id="camera-sensitivity-slider" type="range" min="5" max="35" value="20" style="width: 80px; accent-color: #00f0ff;" title="Motion Detection Sensitivity">
+            </div>
+            <div id="camera-status-badge-2" class="status-pill">OFFLINE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Two-Column Layout: Left Video, Right Dedicated Radar -->
+      <div style="display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 16px; margin-bottom: 16px;">
+        <!-- Left: Large Live Video Stream with Tactical Overlay -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">📷 LIVE WEBCAM CV SENSOR (MULTI-OBJECT)</div>
+            <div class="card-subtitle">SPATIAL CLUSTERING & TRACKING</div>
+          </div>
+          <div class="camera-stream-wrapper" style="aspect-ratio: 4 / 3; max-height: 420px;">
+            <video id="webcam-feed-2" class="webcam-video" autoplay playsinline muted></video>
+            <canvas id="webcam-overlay-canvas-2" class="webcam-overlay-canvas"></canvas>
+          </div>
+          <div style="margin-top: 10px; font-family: monospace; font-size: 0.72rem; color: #ffaa00; display: flex; justify-content: space-between;">
+            <span>* Move 1, 2, or more objects/hands in front of camera</span>
+            <span>SIMULATED RF PARAMETERS — NOT MEASURED BY WEBCAM</span>
+          </div>
+        </div>
+
+        <!-- Right: Dedicated Live Radar HUD for Camera Targets -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">◎ SYNTHETIC RADAR MAPPING</div>
+            <div class="card-subtitle">MULTI-TARGET PLOTTING (0,0 CENTER)</div>
+          </div>
+          <div class="radar-container" style="max-width: 380px;">
+            <canvas id="camera-radar-canvas" class="radar-canvas"></canvas>
+            <div class="radar-hud-overlay">
+              <span>ALERT BOUND: 5.0 KM</span>
+              <span>SYNTHETIC RANGE</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Grid: Active Target Cards List + History Table -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <!-- Left: Active Visual Targets List -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">🎯 ACTIVE DETECTED OBJECTS</div>
+            <div class="card-subtitle">REAL-TIME MULTI-TARGET IDENTIFIERS</div>
+          </div>
+          <div id="cam-active-targets-list" style="max-height: 220px; overflow-y: auto;">
+            <div style="color: #64748b; font-family: monospace; font-size: 0.78rem; padding: 6px;">NO VISUAL TARGETS DETECTED</div>
+          </div>
+        </div>
+
+        <!-- Right: Target History Table -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">📋 TARGET DETECTION AUDIT LOG</div>
+            <div class="card-subtitle">HISTORICAL CV EVENTS</div>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; font-family: monospace; font-size: 0.75rem; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 1px solid #1e3a5f; color: #00f0ff;">
+                <th style="padding: 6px;">Target</th>
+                <th>Category</th>
+                <th>First Seen</th>
+                <th>Last Seen</th>
+                <th>Status</th>
+                <th>Confidence</th>
+              </tr>
+            </thead>
+            <tbody id="cam-target-history-tbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         TAB 7: ANALYTICS & COMPARISON
+         ==================================================================== -->
+    <div id="tab-analytics" class="tab-pane">
+      <div class="tactical-card" style="margin-bottom: 16px;">
+        <div class="card-header">
+          <div class="card-title">📊 STRATEGY PERFORMANCE BENCHMARK</div>
+          <div class="card-subtitle">FIXED SCAN vs RANDOM SCAN vs RULE-BASED vs SWASTIK ADAPTIVE</div>
+        </div>
+        <div style="height: 320px; width: 100%;">
+          <canvas id="analytics-benchmark-chart"></canvas>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+        <div class="tactical-card" style="border-color: #00f0ff;">
+          <div class="card-title" style="font-size: 0.8rem; color: #00f0ff;">SWASTIK ADAPTIVE</div>
+          <div style="font-size: 1.8rem; font-weight: bold; color: #fff; font-family: monospace; margin: 8px 0;">94.2%</div>
+          <div style="font-size: 0.72rem; color: #00ff88; font-family: monospace;">Detection Probability</div>
+          <div style="font-size: 0.7rem; color: #64748b; font-family: monospace; margin-top: 4px;">Avg Delay: 24.5 ms</div>
+        </div>
+        <div class="tactical-card">
+          <div class="card-title" style="font-size: 0.8rem; color: #ffaa00;">RULE-BASED SCAN</div>
+          <div style="font-size: 1.8rem; font-weight: bold; color: #fff; font-family: monospace; margin: 8px 0;">68.0%</div>
+          <div style="font-size: 0.72rem; color: #ffaa00; font-family: monospace;">Detection Probability</div>
+          <div style="font-size: 0.7rem; color: #64748b; font-family: monospace; margin-top: 4px;">Avg Delay: 82.0 ms</div>
+        </div>
+        <div class="tactical-card">
+          <div class="card-title" style="font-size: 0.8rem; color: #64748b;">SEQUENTIAL FIXED</div>
+          <div style="font-size: 1.8rem; font-weight: bold; color: #fff; font-family: monospace; margin: 8px 0;">44.0%</div>
+          <div style="font-size: 0.72rem; color: #64748b; font-family: monospace;">Detection Probability</div>
+          <div style="font-size: 0.7rem; color: #64748b; font-family: monospace; margin-top: 4px;">Avg Delay: 148.0 ms</div>
+        </div>
+        <div class="tactical-card">
+          <div class="card-title" style="font-size: 0.8rem; color: #ff2a4b;">RANDOM UNIFORM</div>
+          <div style="font-size: 1.8rem; font-weight: bold; color: #fff; font-family: monospace; margin: 8px 0;">32.0%</div>
+          <div style="font-size: 0.72rem; color: #ff2a4b; font-family: monospace;">Detection Probability</div>
+          <div style="font-size: 0.7rem; color: #64748b; font-family: monospace; margin-top: 4px;">Avg Delay: 215.0 ms</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         TAB 8: SIMULATION & SCENARIOS
+         ==================================================================== -->
+    <div id="tab-simulation" class="tab-pane">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <!-- Left: Simulation Controls & Scenarios -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">⚙ SIMULATION CONTROLS</div>
+            <div class="card-subtitle">ENVIRONMENT SCENARIOS</div>
+          </div>
+
+          <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+            <button id="btn-sim-start" class="btn-tactical btn-gold" style="flex: 1;">START</button>
+            <button id="btn-sim-pause" class="btn-tactical" style="flex: 1;">PAUSE</button>
+            <button id="btn-sim-reset" class="btn-tactical btn-danger" style="flex: 1;">RESET</button>
+          </div>
+
+          <div style="margin-bottom: 14px;">
+            <label style="font-family: monospace; font-size: 0.75rem; color: #00f0ff; display: block; margin-bottom: 4px;">
+              ACTIVE SCENARIO:
+            </label>
+            <select id="select-scenario" style="width: 100%; background: #040814; border: 1px solid #1e3a5f; color: #fff; padding: 8px; border-radius: 4px; font-family: monospace;">
+              <option value="smart_scan_demo">Smart Scan Demo (8-Step Automated Walkthrough)</option>
+              <option value="multiple_objects">Multiple Airborne Targets (Aircraft, Drones, Bird)</option>
+              <option value="fast_movement">High-Speed Targets (Missile & Fast Aircraft)</option>
+              <option value="high_activity_band">High Activity Band (B5 Rolling 10-min Recurrence)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Right: Manual Target Injector -->
+        <div class="tactical-card">
+          <div class="card-header">
+            <div class="card-title">➕ INJECT SYNTHETIC TARGET</div>
+            <div class="card-subtitle">MANUAL TELEMETRY INJECTION</div>
+          </div>
+
+          <form id="form-add-target">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+              <div>
+                <label style="font-size: 0.72rem; color: #64748b; font-family: monospace;">TARGET ID</label>
+                <input id="inject-id" type="text" value="UAV-09" style="width: 100%; background: #040814; border: 1px solid #1e3a5f; color: #fff; padding: 6px; font-family: monospace;">
+              </div>
+              <div>
+                <label style="font-size: 0.72rem; color: #64748b; font-family: monospace;">TYPE</label>
+                <select id="inject-type" style="width: 100%; background: #040814; border: 1px solid #1e3a5f; color: #fff; padding: 6px; font-family: monospace;">
+                  <option value="Drone">Drone</option>
+                  <option value="Aircraft">Aircraft</option>
+                  <option value="Missile">Missile</option>
+                  <option value="Unknown Airborne Object">Unknown Object</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.72rem; color: #64748b; font-family: monospace;">X (KM)</label>
+                <input id="inject-x" type="number" step="0.5" value="7.5" style="width: 100%; background: #040814; border: 1px solid #1e3a5f; color: #fff; padding: 6px; font-family: monospace;">
+              </div>
+              <div>
+                <label style="font-size: 0.72rem; color: #64748b; font-family: monospace;">Y (KM)</label>
+                <input id="inject-y" type="number" step="0.5" value="-6.0" style="width: 100%; background: #040814; border: 1px solid #1e3a5f; color: #fff; padding: 6px; font-family: monospace;">
+              </div>
+            </div>
+            <div style="margin-bottom: 10px;">
+              <label style="font-size: 0.72rem; color: #64748b; font-family: monospace;">INITIAL SYNTHETIC BAND</label>
+              <select id="inject-band" style="width: 100%; background: #040814; border: 1px solid #1e3a5f; color: #fff; padding: 6px; font-family: monospace;">
+                <option value="B3">B3 (VHF/UHF)</option>
+                <option value="B4">B4 (S/C Band)</option>
+                <option value="B5">B5 (X Band)</option>
+                <option value="B7">B7 (K Band)</option>
+              </select>
+            </div>
+            <button type="submit" class="btn-tactical btn-gold" style="width: 100%;">
+              SPAWN TARGET ON RADAR
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         TAB 9: SYSTEM SETTINGS
+         ==================================================================== -->
+    <div id="tab-settings" class="tab-pane">
+      <div class="tactical-card" style="max-width: 600px; margin: 0 auto;">
+        <div class="card-header">
+          <div class="card-title">🛠 AI DECISION ENGINE WEIGHTS</div>
+          <div class="card-subtitle">CONFIGURABLE HEURISTIC PARAMETERS</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px; font-family: monospace; font-size: 0.8rem;">
+          <div class="data-row">
+            <span>Prediction Weight (w_pred)</span>
+            <input type="number" step="0.05" value="0.28" style="background: #040814; border: 1px solid #1e3a5f; color: #00f0ff; width: 70px; text-align: center;">
+          </div>
+          <div class="data-row">
+            <span>Recent Activity Weight (w_recent)</span>
+            <input type="number" step="0.05" value="0.25" style="background: #040814; border: 1px solid #1e3a5f; color: #00f0ff; width: 70px; text-align: center;">
+          </div>
+          <div class="data-row">
+            <span>Movement Trend Weight (w_trend)</span>
+            <input type="number" step="0.05" value="0.20" style="background: #040814; border: 1px solid #1e3a5f; color: #00f0ff; width: 70px; text-align: center;">
+          </div>
+          <div class="data-row">
+            <span>Uncertainty Weight (w_uncert)</span>
+            <input type="number" step="0.05" value="0.10" style="background: #040814; border: 1px solid #1e3a5f; color: #00f0ff; width: 70px; text-align: center;">
+          </div>
+          <div class="data-row">
+            <span>Staleness / Time Since Scan (w_stale)</span>
+            <input type="number" step="0.05" value="0.08" style="background: #040814; border: 1px solid #1e3a5f; color: #00f0ff; width: 70px; text-align: center;">
+          </div>
+          <div class="data-row">
+            <span>Alert Perimeter Boundary (km)</span>
+            <input type="number" step="1.0" value="5.0" style="background: #040814; border: 1px solid #1e3a5f; color: #ff2a4b; width: 70px; text-align: center;">
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Final Hero Tagline Footer -->
+  <footer class="tactical-footer">
+    <div class="hero-quote">“FIXED SCANNING FOLLOWS A SCHEDULE. SWASTIK FOLLOWS THE SITUATION.”</div>
+    <div class="hero-subquote">“DON’T SCAN EVERYTHING EQUALLY. SCAN WHAT MATTERS NEXT.”</div>
+    <div class="hero-loop">
+      <span>OBSERVE</span> → <span>PREDICT</span> → <span>PRIORITIZE</span> → <span>SCAN</span> → <span>LEARN</span> → <span>REPEAT</span>
+    </div>
+    <div style="font-family: monospace; font-size: 0.72rem; color: #64748b; margin-top: 8px;">
+      SWASTIK // DEFENSE RESEARCH SIMULATION PLATFORM // SIH 2025-2026
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/vendor/chart.min.js"></script>
+  <script src="/vendor/lucide.min.js"></script>
+  <script src="/js/audio.js?v=3.0"></script>
+  <script src="/js/radar.js?v=3.0"></script>
+  <script src="/js/waterfall.js?v=3.0"></script>
+  <script src="/js/camera.js?v=3.0"></script>
+  <script src="/js/app.js?v=3.0"></script>
+</body>
+</html>
