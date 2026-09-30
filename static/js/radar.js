@@ -19,6 +19,13 @@ class TacticalRadarHUD {
     this.targets = [];
     this.selectedTargetId = null;
     this.hoveredTarget = null;
+
+    // Additive ADS-B Layer State
+    this.showSyntheticRF = true;
+    this.showADSBLayer = true;
+    this.adsbAircraft = [];
+    this.hoveredAircraft = null;
+    this.selectedAircraftId = null;
     
     this._initCanvas();
     this._bindEvents();
@@ -48,29 +55,72 @@ class TacticalRadarHUD {
       const scale = (this.displaySize / 2 * 0.88) / this.maxRangeKm;
       
       this.hoveredTarget = null;
-      for (const t of this.targets) {
-        // radar x -> +East (right), y -> +North (up)
-        const px = center + t.x * scale;
-        const py = center - t.y * scale;
-        const dist = Math.hypot(mx - px, my - py);
-        if (dist < 18) {
-          this.hoveredTarget = t;
-          break;
+      this.hoveredAircraft = null;
+
+      // 1. Check synthetic targets if synthetic RF layer is enabled
+      if (this.showSyntheticRF !== false) {
+        for (const t of this.targets) {
+          // radar x -> +East (right), y -> +North (up)
+          const px = center + t.x * scale;
+          const py = center - t.y * scale;
+          const dist = Math.hypot(mx - px, my - py);
+          if (dist < 18) {
+            this.hoveredTarget = t;
+            break;
+          }
         }
       }
+
+      // 2. Check ADS-B aircraft if ADS-B layer is enabled
+      if (!this.hoveredTarget && this.showADSBLayer !== false && this.adsbAircraft) {
+        for (const a of this.adsbAircraft) {
+          const px = center + a.x * scale;
+          const py = center - a.y * scale;
+          const dist = Math.hypot(mx - px, my - py);
+          if (dist < 18) {
+            this.hoveredAircraft = a;
+            break;
+          }
+        }
+      }
+
+      this.canvas.style.cursor = (this.hoveredTarget || this.hoveredAircraft) ? 'pointer' : 'crosshair';
     });
 
     this.canvas.addEventListener('click', () => {
       if (this.hoveredTarget) {
         this.selectedTargetId = this.hoveredTarget.object_id;
+        this.selectedAircraftId = null;
         if (window.tacticalAudio) window.tacticalAudio.playChirp();
         if (window.onTargetSelected) window.onTargetSelected(this.hoveredTarget);
+      } else if (this.hoveredAircraft) {
+        this.selectedAircraftId = this.hoveredAircraft.id;
+        this.selectedTargetId = null;
+        if (window.tacticalAudio) window.tacticalAudio.playChirp();
+        if (window.onAircraftSelected) window.onAircraftSelected(this.hoveredAircraft);
       }
     });
   }
 
   updateTargets(targets) {
     this.targets = targets || [];
+  }
+
+  updateADSBAircraft(aircraftList) {
+    this.adsbAircraft = aircraftList || [];
+  }
+
+  setRangeKm(rangeKm) {
+    const r = Number(rangeKm) || 20.0;
+    this.maxRangeKm = r;
+    this.alertBoundaryKm = Math.min(5.0, r * 0.25);
+    this.ringsKm = [
+      Math.round(r * 0.1 * 10) / 10,
+      Math.round(r * 0.25 * 10) / 10,
+      Math.round(r * 0.5 * 10) / 10,
+      Math.round(r * 0.75 * 10) / 10,
+      r
+    ];
   }
 
   _startRenderLoop() {
@@ -183,91 +233,152 @@ class TacticalRadarHUD {
     ctx.strokeStyle = 'rgba(0, 255, 136, 0.5)';
     ctx.stroke();
 
-    // 6. Draw Targets (simulation + live camera targets)
-    const renderTargets = [...this.targets];
-    if (window.cameraActiveTargets && window.cameraActiveTargets.length > 0) {
-      const existingIds = new Set(renderTargets.map(t => t.object_id));
-      for (const camT of window.cameraActiveTargets) {
-        if (!existingIds.has(camT.object_id)) {
-          renderTargets.push(camT);
+    // 6. Draw Targets (simulation + live camera targets) if Synthetic RF layer is active
+    if (this.showSyntheticRF !== false) {
+      const renderTargets = [...this.targets];
+      if (window.cameraActiveTargets && window.cameraActiveTargets.length > 0) {
+        const existingIds = new Set(renderTargets.map(t => t.object_id));
+        for (const camT of window.cameraActiveTargets) {
+          if (!existingIds.has(camT.object_id)) {
+            renderTargets.push(camT);
+          }
         }
+      }
+
+      for (const t of renderTargets) {
+        const tx = center + t.x * kmToPx;
+        const ty = center - t.y * kmToPx;
+
+        // Draw historical trajectory breadcrumbs
+        if (t.history && t.history.length > 1) {
+          ctx.beginPath();
+          for (let i = 0; i < t.history.length; i++) {
+            const hx = center + t.history[i].x * kmToPx;
+            const hy = center - t.history[i].y * kmToPx;
+            if (i === 0) ctx.moveTo(hx, hy);
+            else ctx.lineTo(hx, hy);
+          }
+          ctx.strokeStyle = 'rgba(0, 240, 255, 0.22)';
+          ctx.setLineDash([2, 2]);
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // Velocity vector line
+        if (t.velocity_kmh > 10) {
+          const headingRad = ((t.heading_deg || 0) - 90) * (Math.PI / 180);
+          const vLen = Math.min(30, (t.velocity_kmh / 30.0) * kmToPx * 0.8);
+          ctx.beginPath();
+          ctx.moveTo(tx, ty);
+          ctx.lineTo(tx + Math.cos(headingRad) * vLen, ty + Math.sin(headingRad) * vLen);
+          ctx.strokeStyle = 'rgba(0, 255, 136, 0.7)';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+        }
+
+        // Choose Color & Reticle
+        let targetColor = t.customColor;
+        if (!targetColor) {
+          if (t.classification === 'Drone') targetColor = '#00ff88';
+          else if (t.classification === 'Missile') targetColor = '#ff2a4b';
+          else if (t.classification === 'Bird') targetColor = '#c084fc';
+          else if (t.risk_level === 'HIGH' || t.distance < this.alertBoundaryKm) targetColor = '#ff2a4b';
+          else targetColor = '#00f0ff';
+        }
+
+        // Check if sweep line is crossing target -> trigger audio blip
+        const targetAngle = Math.atan2(ty - center, tx - center);
+        const normTargetAngle = (targetAngle + Math.PI * 2) % (Math.PI * 2);
+        const angleDiff = Math.abs(normTargetAngle - this.sweepAngle);
+        if (angleDiff < 0.03 && window.tacticalAudio) {
+          window.tacticalAudio.playRadarBlip();
+        }
+
+        // Draw Reticle Blip
+        ctx.beginPath();
+        ctx.arc(tx, ty, 5, 0, Math.PI * 2);
+        ctx.fillStyle = targetColor;
+        ctx.fill();
+
+        // Outer pulsing ring for selected or alert targets
+        const pulseSize = 9 + Math.sin(Date.now() / 150) * 2;
+        ctx.beginPath();
+        ctx.arc(tx, ty, pulseSize, 0, Math.PI * 2);
+        ctx.strokeStyle = targetColor;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        // Target Tactical Data Tag
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 10px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${t.object_id} [${t.current_band}]`, tx + 9, ty - 6);
+
+        ctx.fillStyle = targetColor;
+        ctx.font = '9px monospace';
+        ctx.fillText(`${t.distance.toFixed(1)}km | ${t.direction}`, tx + 9, ty + 6);
+        ctx.fillText(`${t.classification}`, tx + 9, ty + 16);
       }
     }
 
-    for (const t of renderTargets) {
-      const tx = center + t.x * kmToPx;
-      const ty = center - t.y * kmToPx;
+    // 7. Draw Live ADS-B Civilian Aircraft Layer
+    if (this.showADSBLayer !== false && this.adsbAircraft && this.adsbAircraft.length > 0) {
+      for (const a of this.adsbAircraft) {
+        if (a.distance > this.maxRangeKm) continue;
 
-      // Draw historical trajectory breadcrumbs
-      if (t.history && t.history.length > 1) {
+        const ax = center + a.x * kmToPx;
+        const ay = center - a.y * kmToPx;
+
+        const isSel = (this.selectedAircraftId === a.id);
+        const isHov = (this.hoveredAircraft && this.hoveredAircraft.id === a.id);
+
+        // Rotating Airplane Silhouette
+        ctx.save();
+        ctx.translate(ax, ay);
+        const hdgRad = ((a.heading_deg || a.heading || 0) - 90) * (Math.PI / 180);
+        ctx.rotate(hdgRad);
+
+        // Airplane geometry
         ctx.beginPath();
-        for (let i = 0; i < t.history.length; i++) {
-          const hx = center + t.history[i].x * kmToPx;
-          const hy = center - t.history[i].y * kmToPx;
-          if (i === 0) ctx.moveTo(hx, hy);
-          else ctx.lineTo(hx, hy);
+        ctx.moveTo(9, 0);       // Nose
+        ctx.lineTo(-3, 8);      // Right wingtip
+        ctx.lineTo(-2, 2.5);    // Right wing root
+        ctx.lineTo(-7, 3.5);    // Right tail tip
+        ctx.lineTo(-6, 0);      // Tail center
+        ctx.lineTo(-7, -3.5);   // Left tail tip
+        ctx.lineTo(-2, -2.5);   // Left wing root
+        ctx.lineTo(-3, -8);     // Left wingtip
+        ctx.closePath();
+
+        ctx.fillStyle = isSel ? '#facc15' : (a.is_demo ? '#38bdf8' : '#34d399');
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+        ctx.restore();
+
+        // Pulsing ring if selected or hovered
+        if (isSel || isHov) {
+          ctx.beginPath();
+          ctx.arc(ax, ay, 13, 0, Math.PI * 2);
+          ctx.strokeStyle = '#facc15';
+          ctx.setLineDash([3, 3]);
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+          ctx.setLineDash([]);
         }
-        ctx.strokeStyle = 'rgba(0, 240, 255, 0.22)';
-        ctx.setLineDash([2, 2]);
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        ctx.setLineDash([]);
+
+        // Aircraft Callsign & Altitude Tag
+        ctx.fillStyle = isSel ? '#facc15' : '#38bdf8';
+        ctx.font = 'bold 9px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(`✈ ${a.callsign}`, ax + 10, ay - 4);
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.font = '8px monospace';
+        ctx.fillText(`${a.altitude_label || ''} | ${a.speed_label || ''}`, ax + 10, ay + 6);
       }
-
-      // Velocity vector line
-      if (t.velocity_kmh > 10) {
-        const headingRad = ((t.heading_deg || 0) - 90) * (Math.PI / 180);
-        const vLen = Math.min(30, (t.velocity_kmh / 30.0) * kmToPx * 0.8);
-        ctx.beginPath();
-        ctx.moveTo(tx, ty);
-        ctx.lineTo(tx + Math.cos(headingRad) * vLen, ty + Math.sin(headingRad) * vLen);
-        ctx.strokeStyle = 'rgba(0, 255, 136, 0.7)';
-        ctx.lineWidth = 1.2;
-        ctx.stroke();
-      }
-
-      // Choose Color & Reticle
-      let targetColor = t.customColor;
-      if (!targetColor) {
-        if (t.classification === 'Drone') targetColor = '#00ff88';
-        else if (t.classification === 'Missile') targetColor = '#ff2a4b';
-        else if (t.classification === 'Bird') targetColor = '#c084fc';
-        else if (t.risk_level === 'HIGH' || t.distance < this.alertBoundaryKm) targetColor = '#ff2a4b';
-        else targetColor = '#00f0ff';
-      }
-
-      // Check if sweep line is crossing target -> trigger audio blip
-      const targetAngle = Math.atan2(ty - center, tx - center);
-      const normTargetAngle = (targetAngle + Math.PI * 2) % (Math.PI * 2);
-      const angleDiff = Math.abs(normTargetAngle - this.sweepAngle);
-      if (angleDiff < 0.03 && window.tacticalAudio) {
-        window.tacticalAudio.playRadarBlip();
-      }
-
-      // Draw Reticle Blip
-      ctx.beginPath();
-      ctx.arc(tx, ty, 5, 0, Math.PI * 2);
-      ctx.fillStyle = targetColor;
-      ctx.fill();
-
-      // Outer pulsing ring for selected or alert targets
-      const pulseSize = 9 + Math.sin(Date.now() / 150) * 2;
-      ctx.beginPath();
-      ctx.arc(tx, ty, pulseSize, 0, Math.PI * 2);
-      ctx.strokeStyle = targetColor;
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-
-      // Target Tactical Data Tag
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 10px monospace';
-      ctx.textAlign = 'left';
-      ctx.fillText(`${t.object_id} [${t.current_band}]`, tx + 9, ty - 6);
-
-      ctx.fillStyle = targetColor;
-      ctx.font = '9px monospace';
-      ctx.fillText(`${t.distance.toFixed(1)}km | ${t.direction}`, tx + 9, ty + 6);
-      ctx.fillText(`${t.classification}`, tx + 9, ty + 16);
     }
 
     ctx.restore(); // Restore clip region

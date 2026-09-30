@@ -154,5 +154,62 @@ class TestSwastikSystem(unittest.TestCase):
         self.assertNotIn("T-001", mgr.targets)
         self.assertEqual(len(mgr.targets), 1)
 
+    def test_adsb_service_and_presets(self):
+        from backend.adsb import ADSB_SERVICE
+        presets = ADSB_SERVICE.get_presets()
+        self.assertIn("delhi", presets)
+        self.assertIn("mumbai", presets)
+        self.assertIn("bengaluru", presets)
+        self.assertAlmostEqual(presets["delhi"]["lat"], 28.5562, places=3)
+
+    def test_adsb_geo_to_radar_conversion(self):
+        from backend.adsb import ADSB_SERVICE
+        # Center = Delhi (28.5562, 77.1000)
+        # Point 1 deg North = ~111 km North (y ~ +111, x ~ 0)
+        x, y, dist, bearing = ADSB_SERVICE._geo_to_radar_xy(29.5562, 77.1000, 28.5562, 77.1000)
+        self.assertAlmostEqual(x, 0.0, delta=1.0)
+        self.assertAlmostEqual(y, 111.0, delta=1.0)
+        self.assertAlmostEqual(dist, 111.0, delta=1.0)
+        self.assertAlmostEqual(bearing, 0.0, delta=1.0)
+
+    def test_adsb_demo_aircraft_structure(self):
+        from backend.adsb import ADSB_SERVICE
+        res = ADSB_SERVICE.get_aircraft(mode="demo", radius_km=100.0)
+        self.assertEqual(res["status"], "DEMO")
+        self.assertGreater(res["aircraft_count"], 0)
+        
+        # Verify required normalized fields on aircraft
+        first = res["aircraft"][0]
+        self.assertIn("id", first)
+        self.assertIn("callsign", first)
+        self.assertIn("country", first)
+        self.assertIn("latitude", first)
+        self.assertIn("longitude", first)
+        self.assertIn("altitude_ft", first)
+        self.assertIn("speed_kt", first)
+        self.assertIn("heading_deg", first)
+        self.assertIn("vertical_rate_fpm", first)
+        self.assertIn("x", first)
+        self.assertIn("y", first)
+        self.assertIn("distance", first)
+        self.assertTrue(first["is_demo"])
+
+    def test_adsb_api_routes(self):
+        from fastapi.testclient import TestClient
+        from backend.app import app
+        client = TestClient(app)
+
+        # 1. Locations endpoint
+        loc_res = client.get("/api/adsb/locations")
+        self.assertEqual(loc_res.status_code, 200)
+        self.assertIn("delhi", loc_res.json())
+
+        # 2. Aircraft endpoint (demo mode)
+        ac_res = client.get("/api/adsb/aircraft?mode=demo&location=delhi&radius_km=100")
+        self.assertEqual(ac_res.status_code, 200)
+        payload = ac_res.json()
+        self.assertEqual(payload["status"], "DEMO")
+        self.assertEqual(payload["aircraft_count"], 8)
+
 if __name__ == "__main__":
     unittest.main()

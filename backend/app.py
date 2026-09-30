@@ -28,6 +28,7 @@ from backend.doppler import DOPPLER_ENGINE
 from backend.vision import CAMERA_RADAR
 from backend.analytics import ANALYTICS
 from backend.websocket_manager import WS_MANAGER
+from backend.adsb import ADSB_SERVICE, AIRSPACE_PRESETS
 
 # Background simulation runner
 sim_task: Optional[asyncio.Task] = None
@@ -335,6 +336,42 @@ def add_object(req: AddTargetRequest):
 def remove_object(object_id: str):
     SIMULATION.remove_target(object_id)
     return {"status": "REMOVED", "object_id": object_id}
+
+# ----------------- Isolated ADS-B Live Aircraft Endpoints -----------------
+@app.get("/api/adsb/locations")
+def get_adsb_locations():
+    """Returns preset airspace monitoring locations."""
+    return ADSB_SERVICE.get_presets()
+
+@app.get("/api/adsb/aircraft")
+def get_adsb_aircraft(
+    location: Optional[str] = None,
+    lat: Optional[float] = None,
+    lon: Optional[float] = None,
+    radius_km: float = 100.0,
+    mode: str = "live"
+):
+    """
+    Fetches real civilian ADS-B aircraft from OpenSky Network API.
+    Converts GPS coordinates into radar-relative (x, y) km centered at the location.
+    """
+    center_lat = lat
+    center_lon = lon
+
+    if location and location.lower() in AIRSPACE_PRESETS:
+        preset = AIRSPACE_PRESETS[location.lower()]
+        center_lat = preset["lat"]
+        center_lon = preset["lon"]
+    elif center_lat is None or center_lon is None:
+        center_lat = 28.5562
+        center_lon = 77.1000
+
+    return ADSB_SERVICE.get_aircraft(
+        center_lat=center_lat,
+        center_lon=center_lon,
+        radius_km=radius_km,
+        mode=mode
+    )
 
 # DSP Controls
 @app.post("/api/signal-quality/toggle")

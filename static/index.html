@@ -134,8 +134,103 @@
           <div class="radar-container">
             <canvas id="mission-radar-canvas" class="radar-canvas"></canvas>
             <div class="radar-hud-overlay">
-              <span>ALERT BOUND: 5.0 KM</span>
-              <span>BEARING: 000° - 360°</span>
+              <span id="radar-alert-bound-label">ALERT BOUND: 5.0 KM</span>
+              <span id="radar-bearing-label">BEARING: 000° - 360°</span>
+            </div>
+          </div>
+
+          <!-- Radar Data Sources & Legend Bar -->
+          <div style="margin: 8px 0; padding: 6px 10px; background: rgba(5,12,24,0.7); border: 1px solid #1e3a5f; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; font-family: monospace; font-size: 0.72rem;">
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <span style="color: #64748b; font-weight: bold;">DATA SOURCES:</span>
+              <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; color: #00f0ff;">
+                <input type="checkbox" id="layer-toggle-synthetic" checked onchange="window.ADSB && window.ADSB.toggleLayer('synthetic', this.checked)">
+                Synthetic RF
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; color: #38bdf8;">
+                <input type="checkbox" id="layer-toggle-adsb" checked onchange="window.ADSB && window.ADSB.toggleLayer('adsb', this.checked)">
+                Live ADS-B
+              </label>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center; color: #94a3b8;">
+              <span><span style="color: #00f0ff;">●</span> Synthetic RF</span>
+              <span><span style="color: #38bdf8;">✈</span> Live ADS-B</span>
+            </div>
+          </div>
+
+          <!-- Live ADS-B Airspace Control & Status Bar -->
+          <div style="margin-bottom: 10px; padding: 8px 10px; background: rgba(4,8,20,0.85); border: 1px solid #1e3a5f; border-radius: 4px; font-family: monospace; font-size: 0.72rem;">
+            <!-- Top Line: Status, Count, Mode, Refresh -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span id="adsb-status-pill" class="status-pill active" style="font-size: 0.7rem; padding: 2px 8px;">ADS-B CONNECTING...</span>
+                <span id="adsb-count-badge" style="color: #38bdf8; font-weight: bold;">LIVE AIRCRAFT: --</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <button id="adsb-mode-toggle-btn" class="btn-tactical" style="padding: 2px 8px; font-size: 0.7rem;" onclick="window.ADSB && window.ADSB.toggleMode()">
+                  🌐 MODE: <strong style="color: #00ff88;">LIVE ADS-B</strong>
+                </button>
+                <button class="btn-tactical" style="padding: 2px 8px; font-size: 0.7rem;" onclick="window.ADSB && window.ADSB.fetchAircraft()">
+                  ⟳ REFRESH
+                </button>
+              </div>
+            </div>
+
+            <!-- Middle Line: Location Selector & Airspace Range -->
+            <div style="display: grid; grid-template-columns: 1.3fr 1fr; gap: 8px; align-items: center; margin-bottom: 4px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="color: #64748b;">LOCATION:</span>
+                <select id="adsb-location-select" style="flex: 1; background: #030814; border: 1px solid #1e3a5f; color: #38bdf8; padding: 2px 6px; font-family: monospace; font-size: 0.7rem;" onchange="
+                  const val = this.value;
+                  const customBox = document.getElementById('adsb-custom-coords-box');
+                  if (val === 'custom') {
+                    customBox.style.display = 'flex';
+                  } else {
+                    customBox.style.display = 'none';
+                    window.ADSB && window.ADSB.setLocation(val);
+                  }
+                ">
+                  <option value="delhi" selected>Delhi (IGI - VIDP)</option>
+                  <option value="mumbai">Mumbai (CSIA - VABB)</option>
+                  <option value="bengaluru">Bengaluru (KIA - VOBL)</option>
+                  <option value="hyderabad">Hyderabad (RGIA - VOHS)</option>
+                  <option value="bhopal">Bhopal (Raja Bhoj - VABP)</option>
+                  <option value="indore">Indore (Devi Ahilyabai - VAID)</option>
+                  <option value="custom">Custom Coordinates...</option>
+                </select>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="color: #64748b;">RANGE:</span>
+                <select id="adsb-range-select" style="flex: 1; background: #030814; border: 1px solid #1e3a5f; color: #ffaa00; padding: 2px 6px; font-family: monospace; font-size: 0.7rem;" onchange="window.ADSB && window.ADSB.setRange(this.value)">
+                  <option value="25">25 km</option>
+                  <option value="50">50 km</option>
+                  <option value="100" selected>100 km (Default)</option>
+                  <option value="200">200 km</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Optional Custom Coordinates Box (Hidden by default) -->
+            <div id="adsb-custom-coords-box" style="display: none; gap: 6px; align-items: center; margin-top: 4px; padding-top: 4px; border-top: 1px dashed #1e3a5f;">
+              <span style="color: #64748b;">LAT:</span>
+              <input id="adsb-custom-lat" type="number" step="0.001" value="28.556" style="width: 70px; background: #030814; border: 1px solid #1e3a5f; color: #fff; font-family: monospace; font-size: 0.7rem; padding: 2px 4px;">
+              <span style="color: #64748b;">LON:</span>
+              <input id="adsb-custom-lon" type="number" step="0.001" value="77.100" style="width: 70px; background: #030814; border: 1px solid #1e3a5f; color: #fff; font-family: monospace; font-size: 0.7rem; padding: 2px 4px;">
+              <button class="btn-tactical btn-gold" style="padding: 2px 6px; font-size: 0.68rem;" onclick="
+                const lat = document.getElementById('adsb-custom-lat').value;
+                const lon = document.getElementById('adsb-custom-lon').value;
+                window.ADSB && window.ADSB.setLocation('custom', lat, lon);
+              ">SET</button>
+            </div>
+
+            <!-- Bottom Line: Center Coordinates & Time Readout -->
+            <div style="display: flex; justify-content: space-between; color: #64748b; font-size: 0.68rem; margin-top: 4px;">
+              <span id="adsb-center-readout">Center: 28.5562°N, 77.1000°E | Radius: 100 km</span>
+              <span id="adsb-last-update-text">Updated: just now</span>
+            </div>
+            <div style="color: #475569; font-size: 0.65rem; margin-top: 2px;">
+              * Passive civilian ADS-B visualization. Data source: OpenSky Network API.
             </div>
           </div>
 
@@ -275,6 +370,19 @@
             </div>
             <div id="cam-active-targets-list-mission" style="max-height: 150px; overflow-y: auto;">
               <div style="color: #64748b; font-family: monospace; font-size: 0.75rem; padding: 4px;">NO VISUAL TARGETS DETECTED</div>
+            </div>
+          </div>
+
+          <!-- Live ADS-B Selected Aircraft Panel -->
+          <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(30,58,95,0.6);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-family: monospace; font-size: 0.75rem; color: #38bdf8; font-weight: bold;">
+                ✈ LIVE ADS-B CONTACT TELEMETRY
+              </span>
+              <span class="disclaimer-badge" style="background: rgba(56,189,248,0.15); color: #38bdf8; font-size: 0.68rem;">OPENSKY REST API</span>
+            </div>
+            <div id="adsb-contact-panel">
+              <!-- Rendered dynamically by ADSB.renderSelectedAircraftPanel() -->
             </div>
           </div>
 
@@ -1161,5 +1269,6 @@
   <script src="/js/waterfall.js?v=3.0"></script>
   <script src="/js/camera.js?v=3.0"></script>
   <script src="/js/app.js?v=3.0"></script>
+  <script src="/js/adsb.js?v=1.0"></script>
 </body>
 </html>
